@@ -11,7 +11,6 @@ const app = express();
 dotenv.config();
 app.use(express.json());
 
-
 // database connection with mongoose
 
 mongoose
@@ -33,5 +32,8 @@ const errorHandler = (err, req, res, next) => {
 }
 app.use(errorHandler);
 
+app.get('/', async (req, res) => {
+    res.send("This server is running")
+})
 
 app.listen(port, () => console.log(`This server is running on ${port}`))

@@ -8,13 +8,47 @@ const router = express.Router();
 const userSchema = require("../schemas/userSchema");
 const User = new mongoose.model("User", userSchema);
 
+const resetPasswordMail = async (username, email, token) => {
+    try {
+        nodemailer.createTransport({
+            host: smtp.gmail.com,
+            port: 587,
+            secure: false,
+            requireTLS: true,
+            auth: {
+                user: process.env.EMAIL_USER,
+                password: process.env.EMAIL_PASSWORD
+            }
+        });
+
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: "For reset password",
+            html: `<P>Hi ${username}, please copy the link  and <a href="http://localhost:5000/user/reset-password?token=${token}">reset your password</a></P>`
+        }
+        transporter.sendmail(mailOptions, function (error, information) {
+            if (error) {
+                console.log(error);
+            } else {
+                console.log("mail has been sent- ", information.response);
+            }
+        })
+
+    } catch (error) {
+        res.status(400).json({
+            "error": "Password does not reset!"
+        });
+    }
+}
+
 // SIGNUP
 router.post("/signup", async (req, res) => {
     try {
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         const newUser = new User({
             name: req.body.name,
-            email: req.body.username,
+            email: req.body.email,
             password: hashedPassword,
         });
         await newUser.save();
@@ -68,36 +102,20 @@ router.post("/login", async (req, res) => {
 });
 
 // FORGET PASSWORD
-const resetPasswordMail = async (username, email, token) => {
-    try {
-        nodemailer.createTransport({
-            host: smtp.gmail.com,
-            port: 587,
-            secure: false,
-            requireTLS: true,
-            auth: {
-                user: process.env.EMAIL_USER,
-                password: process.env.EMAIL_PASSWORD
-            }
-        })
 
-
-    } catch (error) {
-        res.status(400).json({
-            "error": "Password does not reset!"
-        });
-    }
-}
 
 router.post("/forget-password", async (req, res) => {
     try {
         const email = req.body.email;
-        const user = await User.findOne({ email: email });
+        const userData = await User.findOne({ email: email });
+        console.log(userData)
 
-        if (user && user.length > 0) {
+        if (userData && userData.length > 0) {
             const randomString = randomstring.generate();
 
-            const newData = await User.updateOne({ email: email }, { $set: { token: randomString } })
+            const data = await User.updateOne({ email: email }, { $set: { token: randomString } })
+
+            resetPasswordMail(userData.username, userData.email, randomString)
 
             res.status(200).json({
                 "message": "Please check you email inbox and reset your password!"
