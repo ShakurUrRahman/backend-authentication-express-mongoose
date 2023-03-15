@@ -2,45 +2,9 @@ const express = require("express");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const nodemailer = require("nodemailer");
-const randomstring = require("randomstring");
 const router = express.Router();
 const userSchema = require("../schemas/userSchema");
 const User = new mongoose.model("User", userSchema);
-
-// const resetPasswordMail = async (username, email, token) => {
-//     try {
-//         nodemailer.createTransport({
-//             host: smtp.gmail.com,
-//             port: 587,
-//             secure: false,
-//             requireTLS: true,
-//             auth: {
-//                 user: process.env.EMAIL_USER,
-//                 password: process.env.EMAIL_PASSWORD
-//             }
-//         });
-
-//         const mailOptions = {
-//             from: process.env.EMAIL_USER,
-//             to: email,
-//             subject: "For reset password",
-//             html: `<P>Hi ${username}, please copy the link  and <a href="http://localhost:5000/user/reset-password?token=${token}">reset your password</a></P>`
-//         }
-//         transporter.sendmail(mailOptions, function (error, information) {
-//             if (error) {
-//                 console.log(error);
-//             } else {
-//                 console.log("mail has been sent- ", information.response);
-//             }
-//         })
-
-//     } catch (error) {
-//         res.status(400).json({
-//             "error": "Password does not reset!"
-//         });
-//     }
-// }
 
 // SIGNUP
 router.post("/signup", async (req, res) => {
@@ -110,7 +74,7 @@ router.post("/login", async (req, res) => {
     }
 });
 
-// FORGET PASSWORD
+// FORGOT PASSWORD
 router.post("/forgot-password", async (req, res) => {
     try {
         const { email } = req.body;
