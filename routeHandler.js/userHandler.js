@@ -45,19 +45,28 @@ const resetPasswordMail = async (username, email, token) => {
 // SIGNUP
 router.post("/signup", async (req, res) => {
     try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10);
-        const newUser = new User({
-            name: req.body.name,
-            email: req.body.email,
-            password: hashedPassword,
-        });
-        await newUser.save();
-        res.status(200).json({
-            message: "Signup was successful!",
-        });
+        const { email } = req.body;
+        const oldUser = await User.findOne({ email })
+        if (oldUser) {
+            res.status(401).json({
+                "error": "Email exists!"
+            });
+        }
+        else {
+            const hashedPassword = await bcrypt.hash(req.body.password, 10);
+            const newUser = new User({
+                name: req.body.name,
+                email: req.body.email,
+                password: hashedPassword,
+            });
+            await newUser.save();
+            res.status(200).json({
+                "message": "Signup was successful!",
+            });
+        }
     } catch {
         res.status(500).json({
-            message: "Signup was failed!",
+            "message": "Signup was failed!",
         });
     }
 });
