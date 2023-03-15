@@ -8,39 +8,39 @@ const router = express.Router();
 const userSchema = require("../schemas/userSchema");
 const User = new mongoose.model("User", userSchema);
 
-const resetPasswordMail = async (username, email, token) => {
-    try {
-        nodemailer.createTransport({
-            host: smtp.gmail.com,
-            port: 587,
-            secure: false,
-            requireTLS: true,
-            auth: {
-                user: process.env.EMAIL_USER,
-                password: process.env.EMAIL_PASSWORD
-            }
-        });
+// const resetPasswordMail = async (username, email, token) => {
+//     try {
+//         nodemailer.createTransport({
+//             host: smtp.gmail.com,
+//             port: 587,
+//             secure: false,
+//             requireTLS: true,
+//             auth: {
+//                 user: process.env.EMAIL_USER,
+//                 password: process.env.EMAIL_PASSWORD
+//             }
+//         });
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: "For reset password",
-            html: `<P>Hi ${username}, please copy the link  and <a href="http://localhost:5000/user/reset-password?token=${token}">reset your password</a></P>`
-        }
-        transporter.sendmail(mailOptions, function (error, information) {
-            if (error) {
-                console.log(error);
-            } else {
-                console.log("mail has been sent- ", information.response);
-            }
-        })
+//         const mailOptions = {
+//             from: process.env.EMAIL_USER,
+//             to: email,
+//             subject: "For reset password",
+//             html: `<P>Hi ${username}, please copy the link  and <a href="http://localhost:5000/user/reset-password?token=${token}">reset your password</a></P>`
+//         }
+//         transporter.sendmail(mailOptions, function (error, information) {
+//             if (error) {
+//                 console.log(error);
+//             } else {
+//                 console.log("mail has been sent- ", information.response);
+//             }
+//         })
 
-    } catch (error) {
-        res.status(400).json({
-            "error": "Password does not reset!"
-        });
-    }
-}
+//     } catch (error) {
+//         res.status(400).json({
+//             "error": "Password does not reset!"
+//         });
+//     }
+// }
 
 // SIGNUP
 router.post("/signup", async (req, res) => {
@@ -111,28 +111,20 @@ router.post("/login", async (req, res) => {
 });
 
 // FORGET PASSWORD
-
-
-router.post("/forget-password", async (req, res) => {
+router.post("/forgot-password", async (req, res) => {
     try {
-        const email = req.body.email;
-        const userData = await User.findOne({ email: email });
-        console.log(userData)
-
-        if (userData && userData.length > 0) {
-            const randomString = randomstring.generate();
-
-            const data = await User.updateOne({ email: email }, { $set: { token: randomString } })
-
-            resetPasswordMail(userData.username, userData.email, randomString)
-
-            res.status(200).json({
-                "message": "Please check you email inbox and reset your password!"
+        const { email } = req.body;
+        const oldUser = await User.findOne({ email });
+        if (!oldUser) {
+            res.status(401).json({
+                "error": "User does not exists!"
             });
         } else {
-            res.status(200).json({
-                "error": "This email does not exist!"
-            });
+            const secret = process.env.JWT_SECRET + oldUser.password;
+            const token = jwt.sign({ email: oldUser.email, id: oldUser._id }, secret, { expiresIn: "5m" });
+
+            const link = `http://localhost:5000/user/reset-password/${oldUser._id}/${token}`;
+            console.log(link);
         }
     } catch {
         res.status(401).json({
@@ -140,5 +132,29 @@ router.post("/forget-password", async (req, res) => {
         });
     }
 })
+
+// RESET PASSWORD
+router.get("/reset-password/:id/:token", async (req, res) => {
+
+    const { id, token } = req.params;
+    // console.log(req.params);
+
+    const oldUser = await User.findOne({ _id: id });
+    if (!oldUser) {
+        res.status(401).json({
+            "error": "User does not exists!"
+        });
+    }
+
+    const secret = process.env.JWT_SECRET + oldUser.password;
+    try {
+        const verify = jwt.verify(token, secret);
+        res.send("Verified");
+
+    } catch (error) {
+        res.send("Not Verified");
+    }
+});
+
 
 module.exports = router;
