@@ -9,7 +9,7 @@ const User = new mongoose.model("User", userSchema);
 // SIGNUP
 router.post("/signup", async (req, res) => {
     try {
-        const { email } = req.body;
+        const { name, email, password } = req.body;
         const oldUser = await User.findOne({ email })
         if (oldUser) {
             res.status(401).json({
@@ -17,13 +17,15 @@ router.post("/signup", async (req, res) => {
             });
         }
         else {
-            const hashedPassword = await bcrypt.hash(req.body.password, 10);
+            const hashedPassword = await bcrypt.hash(password, 10);
             const newUser = new User({
-                name: req.body.name,
-                email: req.body.email,
+                name: name,
+                email: email,
                 password: hashedPassword,
             });
+
             await newUser.save();
+
             res.status(200).json({
                 "message": "Signup was successful!",
             });
@@ -38,15 +40,16 @@ router.post("/signup", async (req, res) => {
 // LOGIN
 router.post("/login", async (req, res) => {
     try {
-        const user = await User.find({ email: req.body.email });
+        const { email, password } = req.body;
+        const user = await User.find({ email });
         if (user && user.length > 0) {
-            const isValidPassword = await bcrypt.compare(req.body.password, user[0].password);
+            const isValidPassword = await bcrypt.compare(password, user[0].password);
 
             if (isValidPassword) {
                 // generate token
                 const token = jwt.sign({
-                    email: user[0].email,
-                    userId: user[0]._id
+                    email: user.email,
+                    userId: user._id
                 }, process.env.JWT_SECRET, {
                     expiresIn: "1h"
                 });
