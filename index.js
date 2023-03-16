@@ -11,8 +11,11 @@ const app = express();
 dotenv.config();
 app.use(express.json());
 
-// database connection with mongoose
+// ejs Part
+app.set("view engine", "ejs");
+app.use(express.urlencoded({ extended: false }));
 
+// database connection with mongoose
 mongoose
     .connect("mongodb://localhost/users", {
         useNewUrlParser: true,
@@ -32,6 +35,7 @@ const errorHandler = (err, req, res, next) => {
 }
 app.use(errorHandler);
 
+// SERVER
 app.get('/', async (req, res) => {
     res.send("This server is running")
 })

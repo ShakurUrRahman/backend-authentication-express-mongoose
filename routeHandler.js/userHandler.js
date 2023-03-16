@@ -5,6 +5,8 @@ const bcrypt = require("bcrypt");
 const router = express.Router();
 const userSchema = require("../schemas/userSchema");
 const User = new mongoose.model("User", userSchema);
+const nodemailer = require("nodemailer");
+
 
 // SIGNUP
 router.post("/signup", async (req, res) => {
@@ -61,7 +63,7 @@ router.post("/login", async (req, res) => {
 
             } else {
                 res.status(401).json({
-                    "error": "Authentication Failed!"
+                    "error": "Login Failed!"
                 });
             }
 
@@ -91,6 +93,28 @@ router.post("/forgot-password", async (req, res) => {
             const token = jwt.sign({ email: oldUser.email, id: oldUser._id }, secret, { expiresIn: "5m" });
 
             const link = `http://localhost:5000/user/reset-password/${oldUser._id}/${token}`;
+            var transporter = nodemailer.createTransport({
+                service: 'gmail',
+                auth: {
+                    user: 'kmn3asish@gmail.com',
+                    pass: 'ahozhrvbvvvdfcdh'
+                }
+            });
+
+            var mailOptions = {
+                from: 'youremail@gmail.com',
+                to: 'shakururrahman@gmail.com',
+                subject: 'Password Reset',
+                text: link,
+            };
+
+            transporter.sendMail(mailOptions, function (error, info) {
+                if (error) {
+                    console.log(error);
+                } else {
+                    console.log('Email sent: ' + info.response);
+                }
+            });
             console.log(link);
         }
     } catch {
@@ -116,12 +140,46 @@ router.get("/reset-password/:id/:token", async (req, res) => {
     const secret = process.env.JWT_SECRET + oldUser.password;
     try {
         const verify = jwt.verify(token, secret);
-        res.send("Verified");
+        res.render("index", { email: verify.email, status: "Not Verified" });
 
-    } catch (error) {
-        res.send("Not Verified");
+    } catch {
+        res.status(401).json({
+            "error": "Not Verified!"
+        });
     }
 });
+
+// UPDATE PASSWORD
+router.post("/reset-password/:id/:token", async (req, res) => {
+    const { id, token } = req.params;
+    const { password } = req.body;
+
+    const oldUser = await User.findOne({ _id: id });
+    if (!oldUser) {
+        return res.json({ status: "User Not Exists!" });
+    }
+    const secret = process.env.JWT_SECRET + oldUser.password;
+    try {
+        const verify = jwt.verify(token, secret);
+        const encryptedPassword = await bcrypt.hash(password, 10);
+        await User.updateOne(
+            {
+                _id: id,
+            },
+            {
+                $set: {
+                    password: encryptedPassword,
+                },
+            }
+        );
+
+        res.render("index", { email: verify.email, status: "verified" });
+    } catch (error) {
+        console.log(error);
+        res.json({ status: "Something Went Wrong" });
+    }
+});
+
 
 
 module.exports = router;
